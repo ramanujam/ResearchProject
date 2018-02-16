@@ -85,12 +85,13 @@ class organic:
         self.type         = "organic"
 
     def to_string(self):
-        print("Organic Product Name   : %s" % self.product_name)
-        print("Organic Product URL    : %s" % self.product_url)
-        print("Organic Product Price  : %s" % self.price)
-        print("Organic Product Vendor : %s" % self.vendor)
-        print("Organic file location  : %s" % self.filename)
-        print()
+        msg  = self.type + " Product Name   : %s\n"   % self.product_name
+        msg += self.type + " Product URL    : %s\n"   % self.product_url
+        msg += self.type + " Product Price  : %s\n"   % self.price
+        msg += self.type + " Product Vendor : %s\n"   % self.vendor
+        msg += self.type + " file location  : %s\n\n" % self.filename
+        return msg
+
 
     def get_random_filename(self):
         vendor  = re.sub('[^0-9a-zA-Z]+', '_', self.vendor)
@@ -118,14 +119,6 @@ class advertiz(organic):
     def __init__(self, name):
         self.product_name = name
         self.type         = "SponsoredAd"
-
-    def to_string(self):
-        print("Ad Product Name   : %s" % self.product_name)
-        print("Ad Product URL    : %s" % self.product_url)
-        print("Ad Product Price  : %s" % self.price)
-        print("Ad Product Vendor : %s" % self.vendor)
-        print("Ad file location  : %s" % self.filename)
-        print()
 
 class SearchResult:
     def __init__(self, keyword):
@@ -281,7 +274,7 @@ class SearchResult:
                            ad.type,
                            "NA",
                            ad.price,
-                           "file:///"+ad.filename]
+                           "file://"+ad.filename]
                     wr.writerow(row)
             logger.info("Written to CSV")
         except Exception as e:
@@ -310,7 +303,7 @@ class SearchResult:
             return price.group(1)
 
 def main():
-    # subprocess.run("sudo openvpn --config `ls us*443.ovpn | shuf | head -1` --auth-user-pass auth.txt")
+    #exit_code = subprocess.run("sudo openvpn --config `ls ~/vpn/us*443.ovpn | shuf | head -1` --auth-user-pass auth.txt").wait()
     ad_result = SearchResult("Blomus Tea Jane Teamaker - 63578")
     logger.debug(ad_result.to_string())
 
