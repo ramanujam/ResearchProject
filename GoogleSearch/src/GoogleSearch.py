@@ -1,17 +1,18 @@
 # -*- coding: utf-8 -*-
-from bs4 import BeautifulSoup
+from   bs4            import BeautifulSoup
 import csv
+import datetime
+import json
+import logging
 import os
 import random
 import re
 import requests
-import json
 import urllib
-import datetime
-from   web2screenshot import make_screenshot
 import subprocess
+import xlsxwriter
+from   web2screenshot import make_screenshot
 
-import logging
 
 # create logger
 logger = logging.getLogger('GoogleSearchLogger')
@@ -45,6 +46,7 @@ cols = [
         "Search term",
         "Google URL",
         "Ad URL Website",
+        "Website Name",
         "Vendor",
         "Position Num",
         "Position",
@@ -55,10 +57,11 @@ cols = [
         "Ad Value",
         "Static File Path"]
 
-#the default user_agent_list composes chrome,I E,firefox,Mozilla,opera,netscape
-#for more user agent strings,you can find it in http://www.useragentstring.com/pages/useragentstring.php
+# the default user_agent_list composes chrome,I E,firefox,Mozilla,opera,
+# netscape for more user agent strings,you can find it in
+# http://www.useragentstring.com/pages/useragentstring.php
 
-user_agent_list = [\
+user_agent_list = [
         "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.1 (KHTML, like Gecko) Chrome/22.0.1207.1 Safari/537.1"\
         "Mozilla/5.0 (X11; CrOS i686 2268.111.0) AppleWebKit/536.11 (KHTML, like Gecko) Chrome/20.0.1132.57 Safari/536.11",\
         "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/536.6 (KHTML, like Gecko) Chrome/20.0.1092.0 Safari/536.6",\
@@ -79,10 +82,12 @@ user_agent_list = [\
         "Mozilla/5.0 (Windows NT 6.2; WOW64) AppleWebKit/535.24 (KHTML, like Gecko) Chrome/19.0.1055.1 Safari/535.24"
        ]
 # Organic result class
+
+
 class organic:
     def __init__(self, name):
         self.product_name = name
-        self.type         = "organic"
+        self.type = "organic"
 
     def to_string(self):
         msg  = self.type + " Product Name   : %s\n"   % self.product_name
@@ -108,10 +113,12 @@ class organic:
                     self.product_url = "http://" + self.product_url
                 else:
                     logger.debug("Can't find http in URL : please check.\nURL %s\n", self.product_url)
+                    self.filename = "NA"
                     return
             make_screenshot(self.product_url, self.filename)
         except Exception as e:
             logger.exception("message")
+            self.filename = "NA"
 
 
 # Advertisement class
@@ -143,13 +150,18 @@ class SearchResult:
         self.get_location()
 
     def get_location(self):
-        url          = 'http://freegeoip.net/json'
-        r            = requests.get(url)
-        j            = json.loads(r.text)
-        logger.debug("Can be an issue if too many runs made ", j)
-        self.city    = j['city']
-        self.state   = j['region_code']
-
+        try:
+          url          = 'http://freegeoip.net/json'
+          r            = requests.get(url)
+          j            = json.loads(r.text)
+          logger.info("Trying to get location : {} ".format(j))
+          self.city    = j['city']
+          self.state   = j['region_code']
+        except Exception as e:
+          logger.info("Can't reach FREEGEOIP")
+          logger.info(e)
+	  
+	
     def to_string(self):
         print("Keyword : %s" % self.keyword)
         print("Address : %s" % self.address)
@@ -159,11 +171,11 @@ class SearchResult:
 
     def parse_ads(self):
         # get top ads
-        self.parse_top_ads()
+        #self.parse_top_ads()
         # get right ads
-        self.parse_right_ads()
+        #self.parse_right_ads()
         #get bottom ads
-        self.parse_bottom_ads()
+        #self.parse_bottom_ads()
         #get_organic_results
         self.parse_organic_results()
 
@@ -253,32 +265,25 @@ class SearchResult:
             logger.debug("Error while parsing organic result\n", e)
 
     def convert_to_csv(self):
-        try:
-            with open("../data/Ads.csv", 'w') as myfile:
-                wr = csv.writer(myfile, quoting=csv.QUOTE_ALL)
-                wr.writerow(cols)
-                for ad in self.ads:
-                    logger.debug(ad.to_string())
-                    row = [
-                           self.city,
-                           self.state,
-                           datetime.datetime.now(),
-                           self.keyword,
-                           self.address,
-                           ad.product_url,
-                           ad.vendor,
-                           "NA",
-                           ad.location,
-                           "NA",
-                           "1",
-                           ad.type,
-                           "NA",
-                           ad.price,
-                           "file://"+ad.filename]
-                    wr.writerow(row)
-            logger.info("Written to CSV")
-        except Exception as e:
-            logger.debug("Unable to open file 'Ads.csv' to write data\n", e)
+      try:
+        row = 0
+        col = 0
+        workbook = xlsxwriter.Workbook('Test.xlsx')
+        worksheet = workbook.add_worksheet("TestA")
+        for j, t in enumerate(cols):
+          worksheet.write(row, col + j, t)
+        for ad  in self.ads: 
+          row = row + 1
+          row_elements = self.get_spreadsheet_row(ad)
+          for i in range(len(cols)):
+            if (cols[i] == "Static File Path"):
+              worksheet.write_url(row, i, row_elements[i])
+            else:
+              worksheet.write(row, i, row_elements[i])
+        workbook.close()
+
+      except Exception as e:
+        logger.debug("Unable to open file 'Ads.xlsx' to write data\n", e)
 
     def get_vendor_from_organic(self, text):
         vendor_ex = re.compile(r"http[s]?\W+w{0,3}[\.]?(.*?)\.")
@@ -301,9 +306,13 @@ class SearchResult:
             return "NA"
         else:
             return price.group(1)
+    def get_spreadsheet_row(self, ad):
+      row = [self.city, self.state, datetime.datetime.now(), self.keyword, \
+             self.address, ad.product_url, ad.vendor, "NA", "NA", ad.location, \
+             "NA", "1", ad.type, "NA", ad.price, "file://"+ad.filename]
+      return row
 
 def main():
-    #exit_code = subprocess.run("sudo openvpn --config `ls ~/vpn/us*443.ovpn | shuf | head -1` --auth-user-pass auth.txt").wait()
     ad_result = SearchResult("Blomus Tea Jane Teamaker - 63578")
     logger.debug(ad_result.to_string())
 
