@@ -9,8 +9,8 @@ import random
 import re
 import requests
 import urllib
-import subprocess
 import xlsxwriter
+from optparse import OptionParser
 from   web2screenshot import make_screenshot
 
 
@@ -171,11 +171,11 @@ class SearchResult:
 
     def parse_ads(self):
         # get top ads
-        #self.parse_top_ads()
+        self.parse_top_ads()
         # get right ads
-        #self.parse_right_ads()
+        self.parse_right_ads()
         #get bottom ads
-        #self.parse_bottom_ads()
+        self.parse_bottom_ads()
         #get_organic_results
         self.parse_organic_results()
 
@@ -268,15 +268,15 @@ class SearchResult:
       try:
         row = 0
         col = 0
-        workbook = xlsxwriter.Workbook('Test.xlsx')
-        worksheet = workbook.add_worksheet("TestA")
+        workbook = xlsxwriter.Workbook('~/ResearchProject/GoogleSearch/data/SearchResult.xlsx')
+        worksheet = workbook.add_worksheet("ProductDetails")
         for j, t in enumerate(cols):
           worksheet.write(row, col + j, t)
         for ad  in self.ads: 
           row = row + 1
           row_elements = self.get_spreadsheet_row(ad)
           for i in range(len(cols)):
-            if (cols[i] == "Static File Path"):
+            if (cols[i] == "Static File Path" or cols[i] == "Google URL" or cols[i] == "Ad URL Website"):
               worksheet.write_url(row, i, row_elements[i])
             else:
               worksheet.write(row, i, row_elements[i])
@@ -313,7 +313,10 @@ class SearchResult:
       return row
 
 def main():
-    ad_result = SearchResult("Blomus Tea Jane Teamaker - 63578")
+    parser = OptionParser()
+    parser.add_option("-p", "--product_name", dest = "product_name", help="Enter the product you want to search")
+    (options, args) = parser.parse_args()
+    ad_result = SearchResult(options.product_name)
     logger.debug(ad_result.to_string())
 
 if __name__ == "__main__":

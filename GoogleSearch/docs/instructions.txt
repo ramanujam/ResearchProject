@@ -1,0 +1,15 @@
+1. Download the virtual machine :
+   Username: research
+   password: heinz
+
+For each Product
+   a. Go to ~/ResearchProject/GoogleSearch/scripts/
+   b. Run command - `./connect.sh` - look for "Initialization Sequence Completed"
+   c. Now, Run the product search - `./doSearch.sh "UN32EH4003 Samsung"`
+   d. output file will be generated at ~/ResearchProject/GoogleSearch/data/Ads.xlsx"
+
+-----------------------------------------------------------------------------------
+GITHUB Commands
+-----------------------------------------------------------------------------------
+-- Make sure you have a github account for getting the latest code.
+-----------------------------------------------------------------------------------
