@@ -128,8 +128,9 @@ class advertiz(organic):
         self.type         = "SponsoredAd"
 
 class SearchResult:
-    def __init__(self, keyword):
+    def __init__(self, keyword, screenshot):
         self.keyword = keyword
+        self.screenshot = screenshot
         self.address = "http://www.google.com/search?q=%s&num=20&hl=en&start=0" % (urllib.parse.quote_plus(keyword))
         self.user    = self.process_request()
         self.request = urllib.request.Request(self.address, None, {'User-Agent': self.user})
@@ -268,7 +269,7 @@ class SearchResult:
       try:
         row = 0
         col = 0
-        workbook = xlsxwriter.Workbook('~/ResearchProject/GoogleSearch/data/SearchResult.xlsx')
+        workbook = xlsxwriter.Workbook('/home/research/ResearchProject/GoogleSearch/data/SearchResult.xlsx')
         worksheet = workbook.add_worksheet("ProductDetails")
         for j, t in enumerate(cols):
           worksheet.write(row, col + j, t)
@@ -283,7 +284,7 @@ class SearchResult:
         workbook.close()
 
       except Exception as e:
-        logger.debug("Unable to open file 'Ads.xlsx' to write data\n", e)
+        logger.debug("Unable to open file 'SearchResult.xlsx' to write data")
 
     def get_vendor_from_organic(self, text):
         vendor_ex = re.compile(r"http[s]?\W+w{0,3}[\.]?(.*?)\.")
@@ -314,9 +315,11 @@ class SearchResult:
 
 def main():
     parser = OptionParser()
-    parser.add_option("-p", "--product_name", dest = "product_name", help="Enter the product you want to search")
+    parser.add_option("-p", "--product_name", action="store", type="string", dest = "product_name", help="Enter the product you want to search")
+    parser.add_option("-m", "--screenshot", action="store_true", default = True,  dest = "screenshot", help="Do you want to take screenshot")
     (options, args) = parser.parse_args()
-    ad_result = SearchResult(options.product_name)
+    logger.info("Searching for product : {0}".format(options.product_name))
+    ad_result = SearchResult(options.product_name, options.screenshot)
     logger.debug(ad_result.to_string())
 
 if __name__ == "__main__":
