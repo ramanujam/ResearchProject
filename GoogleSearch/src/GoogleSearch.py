@@ -293,23 +293,6 @@ class SearchResult:
 
     def convert_to_csv(self):
       try:
-        # row = 0
-        # col = 0
-        # datadir = os.path.dirname(os.path.realpath(__file__)) + "/../data/"
-        # logger.info("Writing Excelfile to : %s" , datadir)
-        # workbook = xlsxwriter.Workbook(datadir + "SearchResult.xlsx")
-        # worksheet = workbook.add_worksheet("ProductDetails")
-        # for j, t in enumerate(cols):
-        #   worksheet.write(row, col + j, t)
-        # for ad in self.ads:
-        #   row = row + 1
-        #   row_elements = self.get_spreadsheet_row(ad)
-        #   for i in range(len(cols)):
-        #     if (cols[i] == "Static File Path" or cols[i] == "Google URL" or cols[i] == "Ad URL Website"):
-        #       worksheet.write_url(row, i, row_elements[i])
-        #     else:
-        #       worksheet.write(row, i, row_elements[i])
-        # workbook.close()
         db = SearchDB("searchresults")
         for ad in self.ads:
             l = self.get_spreadsheet_row(ad)

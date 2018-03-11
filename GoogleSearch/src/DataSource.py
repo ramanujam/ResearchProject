@@ -1,5 +1,7 @@
 import sqlite3
+import os
 import pandas as pd
+import xlsxwriter
 class SearchDB:
     def __init__(self, tablename):
         self.conn = sqlite3.connect("../data/googlesearch.db")
@@ -81,11 +83,29 @@ class SearchDB:
 
     def save_to_spreadsheet(self):
         df = self.get_all()
-        writer = pd.ExcelWriter("../data/SearchResults.ods")
-        df['StaticFilePath'] = df['StaticFilePath'].apply(lambda link :'=HYPERLINK("{0}", "ScreenShot File") '.format(link))
-        df.to_excel(writer, sheet_name="Result", index=False)
-        writer.save()
-        writer.close()
+        # writer = pd.ExcelWriter("../data/SearchResults.xlsx")
+        # df['StaticFilePath'] = df['StaticFilePath'].apply(lambda link :'=HYPERLINK("{0}"; "ScreenShot File")'.format(link))
+        # df.to_excel(writer, sheet_name="Result", index=False)
+        # writer.save()
+        # writer.close()
+
+        row = 0
+        col = 0
+        datadir = os.path.dirname(os.path.realpath(__file__)) + "/../data/"
+        #logger.info("Writing Excelfile to : %s" , datadir)
+        workbook = xlsxwriter.Workbook(datadir + "SearchResult.xlsx")
+        worksheet = workbook.add_worksheet("ProductDetails")
+        for j, t in enumerate(df.columns):
+          worksheet.write(row, col + j, t)
+        for idx, val in df.iterrows():
+          row = row + 1
+          row_elements = val
+          for i in range(len(row_elements)):
+            if (df.columns[i] == "StaticFilePath" or df.columns[i] == "GoogleURL" or df.columns[i] == "AdURLWebsite"):
+              worksheet.write_url(row, i, row_elements[i])
+            else:
+              worksheet.write(row, i, row_elements[i])
+        workbook.close()
 
 import datetime
 if __name__ == "__main__":
