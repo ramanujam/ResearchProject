@@ -81,7 +81,7 @@ class SearchDB:
 
     def save_to_spreadsheet(self):
         df = self.get_all()
-        writer = pd.ExcelWriter("../data/SearchResults.xlsx")
+        writer = pd.ExcelWriter("../data/SearchResults.ods")
         df['StaticFilePath'] = df['StaticFilePath'].apply(lambda link :'=HYPERLINK("{0}", "ScreenShot File") '.format(link))
         df.to_excel(writer, sheet_name="Result", index=False)
         writer.save()
