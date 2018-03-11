@@ -89,7 +89,7 @@ class SearchDB:
 
 import datetime
 if __name__ == "__main__":
-    mydb = SearchDB("products")
+    mydb = SearchDB("searchresults")
     # mydb.purge_table()
     # mydb.create_table()
     # mydb.add_row([1, 'Marmot Tungsten 4P Tent - 4 Person, 3 Season'])
