@@ -90,10 +90,10 @@ class SearchDB:
 import datetime
 if __name__ == "__main__":
     mydb = SearchDB("products")
-    mydb.purge_table()
-    mydb.create_table()
-    mydb.add_row([1, 'Marmot Tungsten 4P Tent - 4 Person, 3 Season'])
+    # mydb.purge_table()
+    # mydb.create_table()
+    # mydb.add_row([1, 'Marmot Tungsten 4P Tent - 4 Person, 3 Season'])
     #mydb.add_row(['Pittsburgh', 'PA', datetime.datetime(2018, 3, 11, 1, 1, 34, 667852), 'Marmot+Tungsten+4P+Tent+-+4+Person%2C+3+Season', 'http://www.google.com/search?q=Marmot+Tungsten+4P+Tent+-+4+Person%2C+3+Season&num=10&hl=en&start=10', 'http://www.outsideoutfitters.com/p-44945-marmot-tungsten-4p-tent.aspx?variantID=183063', 'Outside Outfitters', 'NA', 'NA', 'RHS', 'NA', 1, 'SponsoredAd', 'NA', '$273.93', 'file:///Users/rohansingh/Programming/ResearchProject/GoogleSearch/data/SponsoredAdMarmot_TungstenOutside_Outfitters15556.png'])
-    print(mydb.get_all())
-
+    # print(mydb.get_all())
+    mydb.save_to_spreadsheet()
 
