@@ -357,7 +357,7 @@ def main():
 
     args = parser.parse_args()
 
-    if(args.product_name is not None or args.product_name.strip() != ""):
+    if(args.product_name is not None and args.product_name.strip() != ""):
         logger.info("Searching for product : {0}".format(args.product_name))
         ad_result = SearchResult(args.product_name, args.screenshot)
         process_product(ad_result, args.pages)
