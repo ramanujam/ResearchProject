@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-from   bs4            import BeautifulSoup
-import csv
 import datetime
 import json
 import logging
@@ -8,11 +6,13 @@ import os
 import random
 import re
 import requests
+import sqlite3
 import urllib
 import xlsxwriter
-from optparse import OptionParser
+from   bs4 import BeautifulSoup
+from   argparse import ArgumentParser
 from   web2screenshot import make_screenshot
-
+from   DataSource import SearchDB
 
 # create logger
 logger = logging.getLogger('GoogleSearchLogger')
@@ -85,9 +85,10 @@ user_agent_list = [
 
 
 class organic:
-    def __init__(self, name):
+    def __init__(self, name, pagenum = 1):
         self.product_name = name
-        self.type = "organic"
+        self.type         = "organic"
+        self.pagenum      = pagenum
 
     def to_string(self):
         msg  = self.type + " Product Name   : %s\n"   % self.product_name
@@ -103,6 +104,7 @@ class organic:
         product = re.sub('[^0-9a-zA-Z]+', '_', self.product_name)
         self.filename = "../data/" + self.type + product[:15] + vendor + str(random.randint(1, 100000)) + ".png"
         self.filename = os.path.abspath(self.filename)
+        self.htmlfn   = self.filename.replace("png", "html")
 
     def convert_url_to_pdf(self):
         self.get_random_filename()
@@ -120,25 +122,42 @@ class organic:
             logger.exception("message")
             self.filename = "NA"
 
+        # Save html as well.
+        try:
+            request = urllib.request.Request(self.product_url, None, {'User-Agent': random.choice(user_agent_list)})
+            urlfile = urllib.request.urlopen(request)
+            htmlcon = urlfile.read().decode('utf-8')
+            with open(self.htmlfn, "w") as text_file:
+                print("Purchase Amount: {}".format(htmlcon), file=text_file)
+        except Exception as e:
+            logger.exception("message")
+            self.htmlfn = "NA"
+
 
 # Advertisement class
 class advertiz(organic):
-    def __init__(self, name):
+    def __init__(self, name, pagenum = 1):
         self.product_name = name
         self.type         = "SponsoredAd"
+        self.pagenum      = pagenum
 
 class SearchResult:
-    def __init__(self, keyword, screenshot):
-        self.keyword = keyword
+    def __init__(self, keyword, screenshot = True):
+        self.keyword    = urllib.parse.quote_plus(keyword)
         self.screenshot = screenshot
-        self.address = "http://www.google.com/search?q=%s&num=20&hl=en&start=0" % (urllib.parse.quote_plus(keyword))
-        self.user    = self.process_request()
+        self.user       = self.process_request()
+        self.ads        = []
+        self.address    = None
+        self.soup       = None
+        self.city       = None
+        self.state      = None
+        self.ads        = []
+
+
+    def create_request(self, pagenum, num = 10, start = 0):
+        self.address = "http://www.google.com/search?q=%s&num=%d&hl=en&start=%d" % (self.keyword, num, start)
         self.request = urllib.request.Request(self.address, None, {'User-Agent': self.user})
-        self.ads     = []
-        # call search
-        self.get_google_search_result()
-        self.parse_ads()
-        self.convert_to_csv()
+        self.pagenum = pagenum
 
     def process_request(self):
         ua = random.choice(user_agent_list)
@@ -165,10 +184,16 @@ class SearchResult:
 	
     def to_string(self):
         print("Keyword : %s" % self.keyword)
-        print("Address : %s" % self.address)
-        print("Title   : %s" % self.soup.title.string)
-        print("City    : %s" % self.city)
-        print("State   : %s" % self.state)
+        if self.address:
+            print("Address : %s" % self.address)
+        if self.soup:
+            print("Title   : %s" % self.soup.title.string)
+        if self.city:
+            print("City    : %s" % self.city)
+        if self.state:
+            print("State   : %s" % self.state)
+        if self.ads:
+            print("Total search results: {}".format(len(self.ads)))
 
     def parse_ads(self):
         # get top ads
@@ -189,7 +214,7 @@ class SearchResult:
             self.right_ad_list = self.right_ads.find_all('div' , {"class": "_Dw"})
             for item in self.right_ad_list:
                 # create ad object
-                ad                = advertiz(ad_data.get_text())
+                ad                = advertiz(ad_data.get_text(), self.pagenum)
                 ad.location       = "RHS"
                 ad.product_url    = item.find('a', {"class":"plantl"})['href']
                 ad.price          = item.find('span', {"class": "_kh"}).text
@@ -197,7 +222,7 @@ class SearchResult:
                 ad.convert_url_to_pdf()
                 self.ads.append(ad)
         except Exception as e:
-            logger.info("Unable to parse right_ads\n", e)
+            logger.info("Unable to parse right_ads\n")
             logger.debug("Right side not parsed.... ", e)
 
     def parse_top_ads(self):
@@ -205,7 +230,7 @@ class SearchResult:
             self.top_ads = self.soup.find("div", {"id": "taw"})
             self.top_ads_list = self.top_ads.find_all(class_="mnr-c pla-unit")
         except Exception as e:
-            logger.info("Unable to parse top_ads\n", e)
+            logger.info("Unable to parse top_ads\n")
             logger.debug("top ads not parsed.... ", e)
 
         for item in self.top_ads_list:
@@ -213,7 +238,7 @@ class SearchResult:
                 ad_data        = item.find('a', {"class" : "plantl pla-unit-title-link"})
 
                 # create ad object
-                ad             = advertiz(ad_data.span.text)
+                ad             = advertiz(ad_data.span.text, self.pagenum)
                 ad.location    = "top"
                 ad.product_url = ad_data['href']
                 ad.price       = item.find(class_="_QD _pvi").get_text()
@@ -231,7 +256,7 @@ class SearchResult:
             for item in self.bottom_ads_list:
                 ad_data        = item.find('a', {"class" : re.compile("(_.+) ")})
                 # create ad object
-                ad             = advertiz(ad_data.text)
+                ad             = advertiz(ad_data.text, self.pagenum)
                 ad.location    = "bottom"
                 ad.product_url = item.find('div', {"class" : "ads-visurl"}).find('cite').text
                 ad.price       = "NA"
@@ -239,7 +264,7 @@ class SearchResult:
                 ad.convert_url_to_pdf()
                 self.ads.append(ad)
         except Exception as e:
-            logger.info("Unable to parse bottom_ads\n", e)
+            logger.info("Unable to parse bottom_ads\n")
             logger.debug("bottom ads not parsed.... " , e)
 
     def parse_organic_results(self):
@@ -250,41 +275,50 @@ class SearchResult:
             for item in self.organic_list:
                 item_data           = item.find('h3', {"class":"r"}).find('a')
                 item_name           = item_data.text
-                oresult             = organic(item_name)
+                oresult             = organic(item_name, self.pagenum)
                 oresult.product_url = item_data['href']
                 logger.debug("Got url " + item_data['href'])
                 oresult.vendor      = self.get_vendor_from_organic(item_data['href'])
                 logger.debug("Got vendor " + oresult.vendor)
                 oresult.location    = "organic :"  + str(count)
+                logger.debug("Found Organic result item : %d", count)
                 count               = count + 1
                 oresult.price       = self.get_price_from_organic(item)
-                print("Got_price :", oresult.price)
                 oresult.convert_url_to_pdf()
                 oresult.to_string()
                 self.ads.append(oresult)
         except Exception as e:
+            logger.info("Error while parsing organic result\n")
             logger.debug("Error while parsing organic result\n", e)
 
     def convert_to_csv(self):
       try:
-        row = 0
-        col = 0
-        workbook = xlsxwriter.Workbook('/home/research/ResearchProject/GoogleSearch/data/SearchResult.xlsx')
-        worksheet = workbook.add_worksheet("ProductDetails")
-        for j, t in enumerate(cols):
-          worksheet.write(row, col + j, t)
-        for ad  in self.ads: 
-          row = row + 1
-          row_elements = self.get_spreadsheet_row(ad)
-          for i in range(len(cols)):
-            if (cols[i] == "Static File Path" or cols[i] == "Google URL" or cols[i] == "Ad URL Website"):
-              worksheet.write_url(row, i, row_elements[i])
-            else:
-              worksheet.write(row, i, row_elements[i])
-        workbook.close()
+        # row = 0
+        # col = 0
+        # datadir = os.path.dirname(os.path.realpath(__file__)) + "/../data/"
+        # logger.info("Writing Excelfile to : %s" , datadir)
+        # workbook = xlsxwriter.Workbook(datadir + "SearchResult.xlsx")
+        # worksheet = workbook.add_worksheet("ProductDetails")
+        # for j, t in enumerate(cols):
+        #   worksheet.write(row, col + j, t)
+        # for ad in self.ads:
+        #   row = row + 1
+        #   row_elements = self.get_spreadsheet_row(ad)
+        #   for i in range(len(cols)):
+        #     if (cols[i] == "Static File Path" or cols[i] == "Google URL" or cols[i] == "Ad URL Website"):
+        #       worksheet.write_url(row, i, row_elements[i])
+        #     else:
+        #       worksheet.write(row, i, row_elements[i])
+        # workbook.close()
+        db = SearchDB("searchresults")
+        for ad in self.ads:
+            l = self.get_spreadsheet_row(ad)
+            print(l)
+            db.add_row(self.get_spreadsheet_row(ad))
 
       except Exception as e:
-        logger.debug("Unable to open file 'SearchResult.xlsx' to write data")
+        logger.debug("Unable to write data to the database.")
+        print(e)
 
     def get_vendor_from_organic(self, text):
         vendor_ex = re.compile(r"http[s]?\W+w{0,3}[\.]?(.*?)\.")
@@ -310,17 +344,55 @@ class SearchResult:
     def get_spreadsheet_row(self, ad):
       row = [self.city, self.state, datetime.datetime.now(), self.keyword, \
              self.address, ad.product_url, ad.vendor, "NA", "NA", ad.location, \
-             "NA", "1", ad.type, "NA", ad.price, "file://"+ad.filename]
+             "NA", ad.pagenum, ad.type, "NA", ad.price, "file://"+ad.filename]
       return row
 
 def main():
-    parser = OptionParser()
-    parser.add_option("-p", "--product_name", action="store", type="string", dest = "product_name", help="Enter the product you want to search")
-    parser.add_option("-m", "--screenshot", action="store_true", default = True,  dest = "screenshot", help="Do you want to take screenshot")
-    (options, args) = parser.parse_args()
-    logger.info("Searching for product : {0}".format(options.product_name))
-    ad_result = SearchResult(options.product_name, options.screenshot)
-    logger.debug(ad_result.to_string())
+
+    # add command line options
+    parser = ArgumentParser(description="Search for Products on Google")
+    parser.add_argument("-p", "--product_name", action="store", type=str, help="Enter the product you want to search")
+    parser.add_argument("-m", "--screenshot", action="store_true", default = True, help="Do you want to take screenshot")
+    parser.add_argument("-n", "--pages", action="store", default = 2, dest = "pages", help="Number of pages to parse")
+
+    args = parser.parse_args()
+
+    if(args.product_name is not None):
+        logger.info("Searching for product : {0}".format(args.product_name))
+        ad_result = SearchResult(args.product_name, args.screenshot)
+        process_product(ad_result, args.pages)
+        logger.debug(ad_result.to_string())
+    else:
+        logger.info("Running for all products in the database")
+        products = get_product_list()
+        logger.info("Got {} products to process".format(len(products)))
+        for i,product in enumerate(products):
+            logger.info("Processing Product {0} of {1}".format(i+1, len(products)))
+            ad_result = SearchResult(product)
+            process_product(ad_result, args.pages)
+            logger.debug(ad_result.to_string())
+
+    save_results_to_spreadsheet()
+
+def save_results_to_spreadsheet():
+    searchdb = SearchDB("searchresults")
+    searchdb.save_to_spreadsheet()
+
+def process_product(searchresult, pages):
+    for i in range(pages):
+        logger.info("Parsing Page : {}".format(i + 1))
+        page_start = i * 10
+        searchresult.create_request(i + 1, start = page_start)
+        searchresult.get_google_search_result()
+        searchresult.parse_ads()
+        logger.debug(searchresult.to_string())
+
+    searchresult.convert_to_csv()
+
+def get_product_list():
+    productdb = SearchDB("products")
+    products  = productdb.get_all()
+    return [item for item in products['ProductName']]
 
 if __name__ == "__main__":
     main()
