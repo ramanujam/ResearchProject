@@ -125,8 +125,8 @@ class organic:
         # Save html as well.
         try:
             request = urllib.request.Request(self.product_url, None, {'User-Agent': random.choice(user_agent_list)})
-            urlfile = urllib.request.urlopen(request)
-            htmlcon = urlfile.read().decode('utf-8')
+            urlfile = urllib.request.urlopen(request, timeout=10)
+            htmlcon = urlfile.read()
             with open(self.htmlfn, "w") as text_file:
                 print("Purchase Amount: {}".format(htmlcon), file=text_file)
         except Exception as e:
@@ -220,10 +220,11 @@ class SearchResult:
                 ad.price          = item.find('span', {"class": "_kh"}).text
                 ad.vendor         = item.find('span' , {"class" :"rhsl4"}).text
                 ad.convert_url_to_pdf()
+                logger.debug(ad.to_string())
                 self.ads.append(ad)
         except Exception as e:
             logger.info("Unable to parse right_ads\n")
-            logger.debug("Right side not parsed.... ", e)
+            logger.debug(ad_data.prettify())
 
     def parse_top_ads(self):
         try:
@@ -231,12 +232,11 @@ class SearchResult:
             self.top_ads_list = self.top_ads.find_all(class_="mnr-c pla-unit")
         except Exception as e:
             logger.info("Unable to parse top_ads\n")
-            logger.debug("top ads not parsed.... ", e)
+            logger.debug(e)
 
         for item in self.top_ads_list:
             try:
                 ad_data        = item.find('a', {"class" : "plantl pla-unit-title-link"})
-
                 # create ad object
                 ad             = advertiz(ad_data.span.text, self.pagenum)
                 ad.location    = "top"
@@ -244,6 +244,7 @@ class SearchResult:
                 ad.price       = item.find(class_="_QD _pvi").get_text()
                 ad.vendor      = item.find(class_="_mC").get_text()
                 ad.convert_url_to_pdf()
+                logger.debug(ad.to_string())
                 self.ads.append(ad)
             except Exception as e:
                 logger.debug(ad_data.prettify())
@@ -262,10 +263,11 @@ class SearchResult:
                 ad.price       = "NA"
                 ad.vendor      = self.get_vendor_from_organic(ad.product_url)
                 ad.convert_url_to_pdf()
+                logger.debug(ad.to_string())
                 self.ads.append(ad)
         except Exception as e:
             logger.info("Unable to parse bottom_ads\n")
-            logger.debug("bottom ads not parsed.... " , e)
+            logger.debug(ad_data.prettify())
 
     def parse_organic_results(self):
         try:
@@ -285,11 +287,11 @@ class SearchResult:
                 count               = count + 1
                 oresult.price       = self.get_price_from_organic(item)
                 oresult.convert_url_to_pdf()
-                oresult.to_string()
+                logger.debug(oresult.to_string())
                 self.ads.append(oresult)
         except Exception as e:
             logger.info("Error while parsing organic result\n")
-            logger.debug("Error while parsing organic result\n", e)
+            logger.debug(oresult.prettify())
 
     def convert_to_csv(self):
       try:
