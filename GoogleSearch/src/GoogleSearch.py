@@ -7,6 +7,7 @@ import random
 import re
 import requests
 import sqlite3
+import subprocess
 import urllib
 import xlsxwriter
 from   bs4 import BeautifulSoup
@@ -352,10 +353,14 @@ def main():
         products = get_product_list()
         logger.info("Got {} products to process".format(len(products)))
         for i,product in enumerate(products):
-            logger.info("Processing Product {0} of {1}".format(i+1, len(products)))
-            ad_result = SearchResult(product)
-            process_product(ad_result, args.pages)
-            logger.debug(ad_result.to_string())
+            openvpn_cmd = ["sudo", "bash", "../scripts/connect.sh"]
+            logger.info("VPN established")
+            with subprocess.Popen(openvpn_cmd) as proc:
+                logger.info("Processing Product {0} of {1}".format(i+1, len(products)))
+                ad_result = SearchResult(product)
+                process_product(ad_result, args.pages)
+                logger.debug(ad_result.to_string())
+                logger.debug("openvpn killed")
 
     save_results_to_spreadsheet()
 
