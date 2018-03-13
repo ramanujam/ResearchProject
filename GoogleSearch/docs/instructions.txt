@@ -11,7 +11,15 @@ For each Product
    c. Now, Run the product search - `./doSearch.sh "UN32EH4003 Samsung"`
    d. output file will be generated at ~/ResearchProject/GoogleSearch/data/SearchResults.xlsx"
 
-
+-----------------------------------------------------------------------------------
+OPENVPN - add to sudoers
+-----------------------------------------------------------------------------------
+1. sudo <editor> /etc/sudoers
+2. add this at the end
+   username ALL=(ALL) NOPASSWD: /usr/sbin/openvpn
+3. exit the document
+4. reopen to see if the line was added
+ 
 -----------------------------------------------------------------------------------
 Database Setup instructions -  Run the following commands IN ORDER
 -----------------------------------------------------------------------------------
