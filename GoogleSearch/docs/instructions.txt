@@ -48,7 +48,7 @@ If you any error for missing library:
 -----------------------------------------------------------------------------------
 Run the following commands IN-ORDER:
 a. source /home/research/ResearchProject/ResearchProject/bin/activate
-b. conda install <package-name> ( e.g. conda install pandas )
+b. pip install <package-name> ( e.g. conda install pandas )
 c. source deactivate
 
 -----------------------------------------------------------------------------------
