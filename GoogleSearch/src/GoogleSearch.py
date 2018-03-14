@@ -340,7 +340,7 @@ def main():
     parser = ArgumentParser(description="Search for Products on Google")
     parser.add_argument("-p", "--product_name", action="store", type=str, help="Enter the product you want to search")
     parser.add_argument("-m", "--screenshot", action="store_true", default = True, help="Do you want to take screenshot")
-    parser.add_argument("-n", "--pages", action="store", default = 1, dest = "pages", help="Number of pages to parse")
+    parser.add_argument("-n", "--pages", action="store", default = 2, dest = "pages", help="Number of pages to parse")
 
     args = parser.parse_args()
 
