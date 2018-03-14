@@ -12,6 +12,7 @@ import urllib
 import xlsxwriter
 from   bs4 import BeautifulSoup
 from   argparse import ArgumentParser
+from   time import sleep
 from   web2screenshot import make_screenshot
 from   DataSource import SearchDB
 
@@ -339,7 +340,7 @@ def main():
     parser = ArgumentParser(description="Search for Products on Google")
     parser.add_argument("-p", "--product_name", action="store", type=str, help="Enter the product you want to search")
     parser.add_argument("-m", "--screenshot", action="store_true", default = True, help="Do you want to take screenshot")
-    parser.add_argument("-n", "--pages", action="store", default = 2, dest = "pages", help="Number of pages to parse")
+    parser.add_argument("-n", "--pages", action="store", default = 1, dest = "pages", help="Number of pages to parse")
 
     args = parser.parse_args()
 
@@ -353,14 +354,28 @@ def main():
         products = get_product_list()
         logger.info("Got {} products to process".format(len(products)))
         for i,product in enumerate(products):
-            openvpn_cmd = ["sudo", "bash", "../scripts/connect.sh"]
-            logger.info("VPN established")
-            with subprocess.Popen(openvpn_cmd) as proc:
-                logger.info("Processing Product {0} of {1}".format(i+1, len(products)))
-                ad_result = SearchResult(product)
-                process_product(ad_result, args.pages)
-                logger.debug(ad_result.to_string())
-                logger.debug("openvpn killed")
+            openvpn_cmd = ["sudo", "/bin/sh", "../scripts/connect.sh"]
+            init_vpn = False
+            proc = subprocess.Popen(openvpn_cmd, stdout=subprocess.PIPE, universal_newlines=True)
+            while( not init_vpn ):
+                nextline = proc.stdout.readline()
+                if(nextline.find("Initialization Sequence Completed") != -1):
+                    init_vpn = True
+                    logger.info("VPN established")
+                else:
+                    logger.debug("waiting..")
+                    logger.debug(nextline)
+            logger.info("Processing Product {0} of {1}".format(i+1, len(products)))
+            ad_result = SearchResult(product)
+            process_product(ad_result, args.pages)
+            logger.debug(ad_result.to_string())
+            init_vpn = False
+            sleep(5)
+            os.system("sudo killall openvpn")
+            proc = None
+            ad_result = None
+            sleep(10)
+            logger.debug("openvpn killed")
 
     save_results_to_spreadsheet()
 
