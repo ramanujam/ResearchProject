@@ -11,6 +11,21 @@ For each Product
    c. Now, Run the product search - `./doSearch.sh "UN32EH4003 Samsung"`
    d. output file will be generated at ~/ResearchProject/GoogleSearch/data/SearchResults.xlsx"
 
+
+-----------------------------------------------------------------------------------
+Add a product list to database
+-----------------------------------------------------------------------------------
+cd to ~/ResearchProject/GoogleSearch/data/
+1. Make a file <filename>.csv
+2. List the products in the form - (you can also use a CSV file made in excel)
+   1,Productname1
+   2,ProductName2
+3. Save the file
+4. write sqlite3 on command line and enter the following commands -
+sqlite> .open googlesearch.db
+sqlite> delete from products;
+sqlite> .mode csv products
+sqlite> .import testProducts.csv products
 -----------------------------------------------------------------------------------
 OPENVPN - add to sudoers
 -----------------------------------------------------------------------------------
