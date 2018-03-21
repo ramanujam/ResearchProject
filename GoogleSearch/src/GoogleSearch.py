@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import datetime
+import glob
 import json
 import logging
 import os
@@ -15,6 +16,9 @@ from   argparse import ArgumentParser
 from   time import sleep
 from   web2screenshot import make_screenshot
 from   DataSource import SearchDB
+
+scriptdir = os.path.dirname(os.path.realpath(__file__))
+parentdir = scriptdir.replace("src","")
 
 # create logger
 logger = logging.getLogger('GoogleSearchLogger')
@@ -38,9 +42,8 @@ logger.addHandler(fh)
 logger.addHandler(ch)
 
 # 'application' code
-logger.debug('debug message')
-logger.info('info message')
-
+logger.info('Script Directory' + scriptdir)
+logger.info('Parent Directory' + parentdir)
 cols = [
         "City",
         "State",
@@ -359,7 +362,10 @@ def main():
         for i,product in enumerate(products):
             proc = None
             try:
-                cmd = "openvpn --redirect-gateway autolocal --config `ls ~/ResearchProject/GoogleSearch/vpn/us*443.ovpn | shuf | head -1` --auth-user-pass ../scripts/auth.txt"
+                vpn_dir = parentdir + "vpn/"
+                pattern  = "us*443.ovpn"
+                cfg_file = random.choice(glob.glob(vpn_dir + pattern))
+                cmd = "openvpn --redirect-gateway autolocal --config {0} --auth-user-pass {1}".format(cfg_file, parentdir+"scripts/auth.txt")
                 openvpn_cmd = shlex.split(cmd)
                 init_vpn = False
                 proc = subprocess.Popen(openvpn_cmd, stdout=subprocess.PIPE, universal_newlines=True, shell=True, preexec_fn=os.setsid)
