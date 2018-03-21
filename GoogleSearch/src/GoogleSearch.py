@@ -372,6 +372,7 @@ def main():
 
                 while(not init_vpn):
                     nextline = proc.stdout.readline()
+                    logger.debug(nextline)
                     if(nextline.find("Initialization Sequence Completed") != -1):
                         init_vpn = True
                         logger.info("VPN established")
