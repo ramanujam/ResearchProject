@@ -365,7 +365,7 @@ def main():
                 vpn_dir = parentdir + "vpn/"
                 pattern  = "us*443.ovpn"
                 cfg_file = random.choice(glob.glob(vpn_dir + pattern))
-                cmd = "openvpn --redirect-gateway autolocal --config {0} --auth-user-pass {1}".format(cfg_file, parentdir+"scripts/auth.txt")
+                cmd = "sudo openvpn --redirect-gateway autolocal --config {0} --auth-user-pass {1}".format(cfg_file, parentdir+"scripts/auth.txt")
                 openvpn_cmd = shlex.split(cmd)
                 init_vpn = False
                 proc = subprocess.Popen(openvpn_cmd, stdout=subprocess.PIPE, universal_newlines=True, shell=True, preexec_fn=os.setsid)
