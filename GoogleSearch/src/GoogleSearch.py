@@ -212,15 +212,18 @@ class SearchResult:
     def parse_right_ads(self):
         try:
             self.right_ads = self.soup.find(id="rhs_block")
-            ad_data = self.right_ads.find('div' , {"class" : "jackpot-title-ratings-container rhsl4"}).text
+            ad_data = self.right_ads.find_all('div' , {"class" : re.compile("jackpot-title-ratings-container.*?")})[0]
             logger.info(ad_data)
-            print(ad_data)
-            self.right_ad_list = self.right_ads.find_all('div' , {"id": "uid_2"})[0]
+            self.right_ad_list = self.right_ads.find_all('div' , {"id": re.compile("uid_\d")})[0]
+            logger.info(self.right_ad_list)
             for item in self.right_ad_list:
                 # create ad object
                 ad                = advertiz(ad_data.get_text(), self.pagenum)
                 ad.location       = "RHS"
-                ad.product_url    = item.find('a', {"class":"plantl"})['href']
+                ad.product_url    = item.find('a', {"class":"plantl"})
+                ad.product_url    = ad.product_url['href']
+                logger.info(ad.product_url)
+                logger.info(item.find('a', {"class":"plantl"})['id'])
                 ad.price          = item.find('span', {"class": "rgc6j"}).text
                 ad.vendor         = self.get_price_from_organic(ad.product_url)
                 ad.convert_url_to_pdf()
@@ -228,6 +231,7 @@ class SearchResult:
                 self.ads.append(ad)
         except Exception as e:
             logger.info("Unable to parse right_ads\n")
+            logger.debug(e)
 
     def parse_top_ads(self):
         try:
@@ -250,7 +254,7 @@ class SearchResult:
                 logger.debug(ad.to_string())
                 self.ads.append(ad)
             except Exception as e:
-                logger.debug(ad_data.prettify())
+                logger.debug(e)
 
 
     def parse_bottom_ads(self):
