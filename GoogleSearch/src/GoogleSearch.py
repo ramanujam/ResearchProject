@@ -212,21 +212,22 @@ class SearchResult:
     def parse_right_ads(self):
         try:
             self.right_ads = self.soup.find(id="rhs_block")
-            ad_data = self.right_ads.find('span' , {"class" : "_Ei rhsg4"})
-            self.right_ad_list = self.right_ads.find_all('div' , {"class": "_Dw"})
+            ad_data = self.right_ads.find('div' , {"class" : "jackpot-title-ratings-container rhsl4"}).text
+            logger.info(ad_data)
+            print(ad_data)
+            self.right_ad_list = self.right_ads.find_all('div' , {"id": "uid_2"})[0]
             for item in self.right_ad_list:
                 # create ad object
                 ad                = advertiz(ad_data.get_text(), self.pagenum)
                 ad.location       = "RHS"
                 ad.product_url    = item.find('a', {"class":"plantl"})['href']
-                ad.price          = item.find('span', {"class": "_kh"}).text
-                ad.vendor         = item.find('span' , {"class" :"rhsl4"}).text
+                ad.price          = item.find('span', {"class": "rgc6j"}).text
+                ad.vendor         = self.get_price_from_organic(ad.product_url)
                 ad.convert_url_to_pdf()
-                logger.debug(ad.to_string())
+                # logger.debug(ad.to_string())
                 self.ads.append(ad)
         except Exception as e:
             logger.info("Unable to parse right_ads\n")
-            logger.debug(ad_data.prettify())
 
     def parse_top_ads(self):
         try:
@@ -243,8 +244,8 @@ class SearchResult:
                 ad             = advertiz(ad_data.span.text, self.pagenum)
                 ad.location    = "top"
                 ad.product_url = ad_data['href']
-                ad.price       = item.find(class_="_QD _pvi").get_text()
-                ad.vendor      = item.find(class_="_mC").get_text()
+                ad.price       = item(text=re.compile(r"(\$\d+[\.\d]+)\b"))[0]
+                ad.vendor      = item.find(class_="LbUacb").span.get_text()
                 ad.convert_url_to_pdf()
                 logger.debug(ad.to_string())
                 self.ads.append(ad)
@@ -269,7 +270,6 @@ class SearchResult:
                 self.ads.append(ad)
         except Exception as e:
             logger.info("Unable to parse bottom_ads\n")
-            logger.debug(ad_data.prettify())
 
     def parse_organic_results(self):
         try:
@@ -293,7 +293,6 @@ class SearchResult:
                 self.ads.append(oresult)
         except Exception as e:
             logger.info("Error while parsing organic result\n")
-            logger.debug(oresult.prettify())
 
     def convert_to_csv(self):
       try:
@@ -354,28 +353,30 @@ def main():
         products = get_product_list()
         logger.info("Got {} products to process".format(len(products)))
         for i,product in enumerate(products):
-            openvpn_cmd = ["sudo", "/bin/sh", "../scripts/connect.sh"]
-            init_vpn = False
-            proc = subprocess.Popen(openvpn_cmd, stdout=subprocess.PIPE, universal_newlines=True)
-            while( not init_vpn ):
-                nextline = proc.stdout.readline()
-                if(nextline.find("Initialization Sequence Completed") != -1):
-                    init_vpn = True
-                    logger.info("VPN established")
-                else:
-                    logger.debug("waiting..")
-                    logger.debug(nextline)
-            logger.info("Processing Product {0} of {1}".format(i+1, len(products)))
-            ad_result = SearchResult(product)
-            process_product(ad_result, args.pages)
-            logger.debug(ad_result.to_string())
-            init_vpn = False
-            sleep(5)
-            os.system("sudo killall openvpn")
-            proc = None
-            ad_result = None
-            sleep(10)
-            logger.debug("openvpn killed")
+            try:
+                openvpn_cmd = ["sudo", "/bin/sh", "../scripts/connect.sh"]
+                init_vpn = False
+                proc = subprocess.Popen(openvpn_cmd, stdout=subprocess.PIPE, universal_newlines=True)
+                while(not init_vpn):
+                    nextline = proc.stdout.readline()
+                    if(nextline.find("Initialization Sequence Completed") != -1):
+                        init_vpn = True
+                        logger.info("VPN established")
+                    else:
+                        logger.debug("waiting..")
+                        logger.debug(nextline)
+                logger.info("Processing Product {0} of {1}".format(i+1, len(products)))
+                ad_result = SearchResult(product)
+                process_product(ad_result, args.pages)
+                logger.debug(ad_result.to_string())
+                sleep(5)
+            except Exception as e:
+                logger.info("unable to parse")
+                logger.debug(e)
+            finally:
+                os.system("sudo killall openvpn")
+                logger.debug("openvpn killed")
+                sleep(10)
 
     save_results_to_spreadsheet()
 
@@ -387,11 +388,10 @@ def process_product(searchresult, pages):
     for i in range(pages):
         logger.info("Parsing Page : {}".format(i + 1))
         page_start = i * 10
-        searchresult.create_request(i + 1, start = page_start)
+        searchresult.create_request(pagenum = i + 1, start = page_start)
         searchresult.get_google_search_result()
         searchresult.parse_ads()
         logger.debug(searchresult.to_string())
-
     searchresult.convert_to_csv()
 
 def get_product_list():
