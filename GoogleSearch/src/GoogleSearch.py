@@ -358,17 +358,17 @@ def main():
         logger.info("Got {} products to process".format(len(products)))
         for i,product in enumerate(products):
             try:
-                openvpn_cmd = ["sudo", "/bin/sh", "../scripts/connect.sh"]
-                init_vpn = False
-                proc = subprocess.Popen(openvpn_cmd, stdout=subprocess.PIPE, universal_newlines=True)
-                while(not init_vpn):
-                    nextline = proc.stdout.readline()
-                    if(nextline.find("Initialization Sequence Completed") != -1):
-                        init_vpn = True
-                        logger.info("VPN established")
-                    else:
-                        logger.debug("waiting..")
-                        logger.debug(nextline)
+                # openvpn_cmd = ["sudo", "/bin/sh", "../scripts/connect.sh"]
+                # init_vpn = False
+                # proc = subprocess.Popen(openvpn_cmd, stdout=subprocess.PIPE, universal_newlines=True)
+                # while(not init_vpn):
+                #     nextline = proc.stdout.readline()
+                #     if(nextline.find("Initialization Sequence Completed") != -1):
+                #         init_vpn = True
+                #         logger.info("VPN established")
+                #     else:
+                #         logger.debug("waiting..")
+                #         logger.debug(nextline)
                 logger.info("Processing Product {0} of {1}".format(i+1, len(products)))
                 ad_result = SearchResult(product)
                 process_product(ad_result, args.pages)
@@ -378,7 +378,7 @@ def main():
                 logger.info("unable to parse")
                 logger.debug(e)
             finally:
-                os.system("sudo killall openvpn")
+                # os.system("sudo killall openvpn")
                 logger.debug("openvpn killed")
                 sleep(10)
 
