@@ -6,10 +6,10 @@ import os
 import random
 import re
 import requests
-import sqlite3
+import signal
+import shlex
 import subprocess
 import urllib
-import xlsxwriter
 from   bs4 import BeautifulSoup
 from   argparse import ArgumentParser
 from   time import sleep
@@ -213,21 +213,21 @@ class SearchResult:
         try:
             self.right_ads = self.soup.find(id="rhs_block")
             ad_data = self.right_ads.find_all('div' , {"class" : re.compile("jackpot-title-ratings-container.*?")})[0]
-            logger.info(ad_data)
-            self.right_ad_list = self.right_ads.find_all('div' , {"id": re.compile("uid_\d")})[0]
-            logger.info(self.right_ad_list)
+            self.right_ad_list = self.right_ads.find_all('div' , {"class": "gkMlQe"})
+            logger.info("Found {} ads on the right hand side".format(len(self.right_ad_list)))
             for item in self.right_ad_list:
                 # create ad object
                 ad                = advertiz(ad_data.get_text(), self.pagenum)
                 ad.location       = "RHS"
                 ad.product_url    = item.find('a', {"class":"plantl"})
+                if (ad.product_url is None):
+                    continue
                 ad.product_url    = ad.product_url['href']
                 logger.info(ad.product_url)
                 logger.info(item.find('a', {"class":"plantl"})['id'])
                 ad.price          = item.find('span', {"class": "rgc6j"}).text
                 ad.vendor         = self.get_price_from_organic(ad.product_url)
                 ad.convert_url_to_pdf()
-                # logger.debug(ad.to_string())
                 self.ads.append(ad)
         except Exception as e:
             logger.info("Unable to parse right_ads\n")
@@ -357,18 +357,21 @@ def main():
         products = get_product_list()
         logger.info("Got {} products to process".format(len(products)))
         for i,product in enumerate(products):
+            proc = None
             try:
-                # openvpn_cmd = ["sudo", "/bin/sh", "../scripts/connect.sh"]
-                # init_vpn = False
-                # proc = subprocess.Popen(openvpn_cmd, stdout=subprocess.PIPE, universal_newlines=True)
-                # while(not init_vpn):
-                #     nextline = proc.stdout.readline()
-                #     if(nextline.find("Initialization Sequence Completed") != -1):
-                #         init_vpn = True
-                #         logger.info("VPN established")
-                #     else:
-                #         logger.debug("waiting..")
-                #         logger.debug(nextline)
+                cmd = "openvpn --redirect-gateway autolocal --config `ls ~/ResearchProject/GoogleSearch/vpn/us*443.ovpn | shuf | head -1` --auth-user-pass ../scripts/auth.txt"
+                openvpn_cmd = shlex.split(cmd)
+                init_vpn = False
+                proc = subprocess.Popen(openvpn_cmd, stdout=subprocess.PIPE, universal_newlines=True, shell=True, preexec_fn=os.setsid)
+
+                while(not init_vpn):
+                    nextline = proc.stdout.readline()
+                    if(nextline.find("Initialization Sequence Completed") != -1):
+                        init_vpn = True
+                        logger.info("VPN established")
+                    else:
+                        logger.debug("waiting..")
+                        logger.debug(nextline)
                 logger.info("Processing Product {0} of {1}".format(i+1, len(products)))
                 ad_result = SearchResult(product)
                 process_product(ad_result, args.pages)
@@ -378,8 +381,9 @@ def main():
                 logger.info("unable to parse")
                 logger.debug(e)
             finally:
-                # os.system("sudo killall openvpn")
-                logger.debug("openvpn killed")
+                if proc is not None:
+                    os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
+                    logger.debug("openvpn killed")
                 sleep(10)
 
     save_results_to_spreadsheet()
