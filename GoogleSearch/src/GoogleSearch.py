@@ -375,6 +375,7 @@ def main():
                     if(nextline.find("Initialization Sequence Completed") != -1):
                         init_vpn = True
                         logger.info("VPN established")
+                        sleep(5)
                     else:
                         logger.debug("waiting..")
                         logger.debug(nextline)
