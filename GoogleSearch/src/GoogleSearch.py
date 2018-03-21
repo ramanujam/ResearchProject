@@ -133,7 +133,7 @@ class organic:
             urlfile = urllib.request.urlopen(request, timeout=10)
             htmlcon = urlfile.read()
             with open(self.htmlfn, "w") as text_file:
-                print("Purchase Amount: {}".format(htmlcon), file=text_file)
+                print(f"{htmlcon}", file=text_file)
         except Exception as e:
             logger.exception("message")
             self.htmlfn = "NA"
