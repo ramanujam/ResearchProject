@@ -394,17 +394,20 @@ def main():
                     logger.info(openvpn_cmd)
                     proc = subprocess.Popen(openvpn_cmd, stdout=subprocess.PIPE, universal_newlines=True, preexec_fn=os.setsid)
 
+                    linecnt = 0
                     while(not init_vpn):
                         nextline = proc.stdout.readline()
                         if(nextline is None or nextline.strip() == ""):
-                            raise Exception("VPN issue")
+                            linecnt += 1
+                            if(linecnt > 100):
+                                raise Exception("VPN issue")
                         if(nextline.find("Initialization Sequence Completed") != -1):
                             init_vpn = True
                             logger.info("VPN established")
                             sleep(5)
                         else:
                             logger.debug("waiting..")
-                            logger.debug(nextline)
+                            # logger.debug(nextline)
                     logger.info("Processing Product {0} of {1}".format(i+1, len(products)))
                     ad_result = SearchResult(product)
                     process_product(ad_result, args.pages)
