@@ -391,10 +391,13 @@ def main():
                     cmd = "openvpn --redirect-gateway autolocal --config {0} --auth-user-pass {1}".format(cfg_file, parentdir+"scripts/auth.txt")
                     openvpn_cmd = shlex.split(cmd)
                     init_vpn = False
+                    logger.info(openvpn_cmd)
                     proc = subprocess.Popen(openvpn_cmd, stdout=subprocess.PIPE, universal_newlines=True, preexec_fn=os.setsid)
 
                     while(not init_vpn):
                         nextline = proc.stdout.readline()
+                        if(nextline is None or nextline.strip() == ""):
+                            raise Exception("VPN issue")
                         if(nextline.find("Initialization Sequence Completed") != -1):
                             init_vpn = True
                             logger.info("VPN established")
