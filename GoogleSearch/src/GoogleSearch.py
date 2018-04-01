@@ -123,9 +123,11 @@ class organic:
                     self.filename = "NA"
                     return
             make_screenshot(self.product_url, self.filename)
+            self.processPDF = True
         except Exception as e:
             logger.exception("message")
             self.filename = "NA"
+            self.processPDF = False
 
         # Save html as well.
         try:
@@ -134,9 +136,11 @@ class organic:
             htmlcon = urlfile.read()
             with open(self.htmlfn, "w") as text_file:
                 print(f"{htmlcon}", file=text_file)
+            self.processHTML = True
         except Exception as e:
             logger.exception("message")
             self.htmlfn = "NA"
+            self.processHTML = False
 
 
 # Advertisement class
@@ -182,9 +186,11 @@ class SearchResult:
           logger.info("Trying to get location : {} ".format(j))
           self.city    = j['city']
           self.state   = j['region_code']
+          self.processLocation = True
         except Exception as e:
           logger.info("Can't reach FREEGEOIP")
           logger.info(e)
+            self.processLocation = False
 	  
 	
     def to_string(self):
@@ -214,7 +220,7 @@ class SearchResult:
 
     def parse_right_ads(self):
         try:
-            self.right_ads = self.soup.find(id="rhs_block")
+            self.right_ads = self.soup.find(id="rhs")
             ad_data = self.right_ads.find_all('div' , {"class" : re.compile("jackpot-title-ratings-container.*?")})[0]
             self.right_ad_list = self.right_ads.find_all('div' , {"class": "gkMlQe"})
             logger.info("Found {} ads on the right hand side".format(len(self.right_ad_list)))
@@ -232,9 +238,13 @@ class SearchResult:
                 ad.vendor         = self.get_price_from_organic(ad.product_url)
                 ad.convert_url_to_pdf()
                 self.ads.append(ad)
+            self.processRightAd = True
         except Exception as e:
             logger.info("Unable to parse right_ads\n")
+            if(self.right_ads is not None):
+                logger.info(self.right_ads.prettify())
             logger.debug(e)
+            self.processRightAd = False
 
     def parse_top_ads(self):
         try:
@@ -242,7 +252,11 @@ class SearchResult:
             self.top_ads_list = self.top_ads.find_all(class_="mnr-c pla-unit")
         except Exception as e:
             logger.info("Unable to parse top_ads\n")
+            if(self.top_ads is not None):
+                logger.debug(self.top_ads.prettify())
             logger.debug(e)
+            self.processTopAd = False
+            return
 
         for item in self.top_ads_list:
             try:
@@ -258,7 +272,7 @@ class SearchResult:
                 self.ads.append(ad)
             except Exception as e:
                 logger.debug(e)
-
+        self.processTopAd = True
 
     def parse_bottom_ads(self):
         try:
@@ -275,8 +289,10 @@ class SearchResult:
                 ad.convert_url_to_pdf()
                 logger.debug(ad.to_string())
                 self.ads.append(ad)
+            self.processBottomAd = True
         except Exception as e:
             logger.info("Unable to parse bottom_ads\n")
+            self.processBottomAd = False
 
     def parse_organic_results(self):
         try:
@@ -298,6 +314,7 @@ class SearchResult:
                 oresult.convert_url_to_pdf()
                 logger.debug(oresult.to_string())
                 self.ads.append(oresult)
+            self.processOrganic = True
         except Exception as e:
             logger.info("Error while parsing organic result\n")
 
@@ -350,6 +367,7 @@ def main():
 
     args = parser.parse_args()
 
+    report = []
     if(args.product_name is not None and args.product_name.strip() != ""):
         logger.info("Searching for product : {0}".format(args.product_name))
         ad_result = SearchResult(args.product_name, args.screenshot)
@@ -361,39 +379,47 @@ def main():
         logger.info("Got {} products to process".format(len(products)))
         for i,product in enumerate(products):
             proc = None
-            try:
-                vpn_dir = parentdir + "vpn/"
-                pattern  = "us*443.ovpn"
-                cfg_file = random.choice(glob.glob(vpn_dir + pattern))
-                cmd = "openvpn --redirect-gateway autolocal --config {0} --auth-user-pass {1}".format(cfg_file, parentdir+"scripts/auth.txt")
-                openvpn_cmd = shlex.split(cmd)
-                init_vpn = False
-                proc = subprocess.Popen(openvpn_cmd, stdout=subprocess.PIPE, universal_newlines=True, preexec_fn=os.setsid)
+            attempts = 0
+            success = 0
+            while success != 1 and attempts < 2:
+                attempts += 1
+                logger.debug("Attempt {}".format(attempts))
+                try:
+                    vpn_dir = parentdir + "vpn/"
+                    pattern  = "us*443.ovpn"
+                    cfg_file = random.choice(glob.glob(vpn_dir + pattern))
+                    cmd = "openvpn --redirect-gateway autolocal --config {0} --auth-user-pass {1}".format(cfg_file, parentdir+"scripts/auth.txt")
+                    openvpn_cmd = shlex.split(cmd)
+                    init_vpn = False
+                    proc = subprocess.Popen(openvpn_cmd, stdout=subprocess.PIPE, universal_newlines=True, preexec_fn=os.setsid)
 
-                while(not init_vpn):
-                    nextline = proc.stdout.readline()
-                    if(nextline.find("Initialization Sequence Completed") != -1):
-                        init_vpn = True
-                        logger.info("VPN established")
-                        sleep(5)
-                    else:
-                        logger.debug("waiting..")
-                        logger.debug(nextline)
-                logger.info("Processing Product {0} of {1}".format(i+1, len(products)))
-                ad_result = SearchResult(product)
-                process_product(ad_result, args.pages)
-                logger.debug(ad_result.to_string())
-                sleep(5)
-            except Exception as e:
-                logger.info("unable to parse")
-                logger.debug(e)
-            finally:
-                if proc is not None:
-                    os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
-                    logger.debug("openvpn killed")
-                sleep(10)
+                    while(not init_vpn):
+                        nextline = proc.stdout.readline()
+                        if(nextline.find("Initialization Sequence Completed") != -1):
+                            init_vpn = True
+                            logger.info("VPN established")
+                            sleep(5)
+                        else:
+                            logger.debug("waiting..")
+                            logger.debug(nextline)
+                    logger.info("Processing Product {0} of {1}".format(i+1, len(products)))
+                    ad_result = SearchResult(product)
+                    process_product(ad_result, args.pages)
+                    logger.debug(ad_result.to_string())
+                    success = 1
+                    sleep(5)
+                except Exception as e:
+                    report.append("Parsing/VPN Issue, please rerun for Product : {}".format(product))
+                    logger.info("Parsing Issue, please rerun for Product : {}".format(product))
+                    logger.debug(e)
+                finally:
+                    if proc is not None:
+                        os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
+                        logger.debug("openvpn killed")
+                    sleep(10)
 
     save_results_to_spreadsheet()
+    print("\n".join(report))
 
 def save_results_to_spreadsheet():
     searchdb = SearchDB("searchresults")
