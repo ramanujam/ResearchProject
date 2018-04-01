@@ -368,62 +368,38 @@ def main():
     args = parser.parse_args()
 
     report = []
+    products = []
     if(args.product_name is not None and args.product_name.strip() != ""):
+        logger.info("Got Product Via command line")
         logger.info("Searching for product : {0}".format(args.product_name))
-        ad_result = SearchResult(args.product_name, args.screenshot)
-        process_product(ad_result, args.pages)
-        logger.debug(ad_result.to_string())
+        products.append(args.product_name)
     else:
         logger.info("Running for all products in the database")
         products = get_product_list()
         logger.info("Got {} products to process".format(len(products)))
-        for i,product in enumerate(products):
-            proc = None
-            attempts = 0
-            success = 0
-            while success != 1 and attempts < 2:
-                attempts += 1
-                logger.debug("Attempt {}".format(attempts))
-                try:
-                    vpn_dir = parentdir + "vpn/"
-                    pattern  = "us*443.ovpn"
-                    cfg_file = random.choice(glob.glob(vpn_dir + pattern))
-                    cmd = "openvpn --redirect-gateway autolocal --config {0} --auth-user-pass {1}".format(cfg_file, parentdir+"scripts/auth.txt")
-                    openvpn_cmd = shlex.split(cmd)
-                    init_vpn = False
-                    logger.info(openvpn_cmd)
-                    proc = subprocess.Popen(openvpn_cmd, stdout=subprocess.PIPE, universal_newlines=True, preexec_fn=os.setsid)
 
-                    linecnt = 0
-                    while(not init_vpn):
-                        nextline = proc.stdout.readline()
-                        if(nextline is None or nextline.strip() == ""):
-                            linecnt += 1
-                        if(nextline.find("Initialization Sequence Completed") != -1):
-                            init_vpn = True
-                            logger.info(nextline)
-                            logger.info("VPN established")
-                            sleep(5)
-                        else:
-                            linecnt += 1
-                            if(linecnt%100 == 0):
-                                logger.debug("waiting..")
-                                logger.debug(nextline)
-                    logger.info("Processing Product {0} of {1}".format(i+1, len(products)))
-                    ad_result = SearchResult(product)
-                    process_product(ad_result, args.pages)
-                    logger.debug(ad_result.to_string())
-                    success = 1
-                    sleep(5)
-                except Exception as e:
-                    report.append("Parsing/VPN Issue, please rerun for Product : {}".format(product))
-                    logger.info("Parsing Issue, please rerun for Product : {}".format(product))
-                    logger.debug(e)
-                finally:
-                    if proc is not None:
-                        os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
-                        logger.debug("openvpn killed")
-                    sleep(10)
+    for i,product in enumerate(products):
+        proc = None
+        attempts = 0
+        success = 0
+        while success != 1 and attempts < 2:
+            attempts += 1
+            try:
+                create_vpn()
+            except Exception as e:
+                report.append("Parsing/VPN Issue, please rerun for Product : {}".format(product))
+                logger.info("Parsing Issue, please rerun for Product : {}".format(product))
+                logger.debug(e)
+            finally:
+                kill_vpn(proc)
+                sleep(10)
+            logger.debug("Attempt {}".format(attempts))
+            logger.info("Processing Product {0} of {1}".format(i+1, len(products)))
+            ad_result = SearchResult(product)
+            process_product(ad_result, args.pages)
+            logger.debug(ad_result.to_string())
+            success = 1
+            sleep(5)
 
     save_results_to_spreadsheet()
     print("\n".join(report))
@@ -446,6 +422,39 @@ def get_product_list():
     productdb = SearchDB("products")
     products  = productdb.get_all()
     return [item for item in products['ProductName']]
+
+def create_vpn():
+    vpn_dir = parentdir + "vpn/"
+    pattern = "us*443.ovpn"
+    cfg_file = random.choice(glob.glob(vpn_dir + pattern))
+    cmd = "openvpn --redirect-gateway autolocal --config {0} --auth-user-pass {1}".format(cfg_file,
+                                                                                          parentdir + "scripts/auth.txt")
+    openvpn_cmd = shlex.split(cmd)
+    init_vpn = False
+    logger.info(openvpn_cmd)
+    proc = subprocess.Popen(openvpn_cmd, stdout=subprocess.PIPE, universal_newlines=True, preexec_fn=os.setsid)
+
+    linecnt = 0
+    while (not init_vpn):
+        nextline = proc.stdout.readline()
+        if (nextline is None or nextline.strip() == ""):
+            linecnt += 1
+        if (nextline.find("Initialization Sequence Completed") != -1):
+            init_vpn = True
+            logger.info(nextline)
+            logger.info("VPN established")
+            sleep(5)
+        else:
+            linecnt += 1
+            if (linecnt % 100 == 0):
+                logger.debug("waiting..")
+                logger.debug(nextline)
+
+def kill_vpn(proc):
+    if proc is not None:
+        os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
+        logger.debug("openvpn killed")
+
 
 if __name__ == "__main__":
     main()
