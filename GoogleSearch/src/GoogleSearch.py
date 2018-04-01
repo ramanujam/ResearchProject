@@ -190,7 +190,7 @@ class SearchResult:
         except Exception as e:
           logger.info("Can't reach FREEGEOIP")
           logger.info(e)
-            self.processLocation = False
+          self.processLocation = False
 	  
 	
     def to_string(self):
