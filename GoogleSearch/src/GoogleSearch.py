@@ -399,15 +399,16 @@ def main():
                         nextline = proc.stdout.readline()
                         if(nextline is None or nextline.strip() == ""):
                             linecnt += 1
-                            if(linecnt > 100):
-                                raise Exception("VPN issue")
                         if(nextline.find("Initialization Sequence Completed") != -1):
                             init_vpn = True
+                            logger.info(nextline)
                             logger.info("VPN established")
                             sleep(5)
                         else:
-                            logger.debug("waiting..")
-                            # logger.debug(nextline)
+                            linecnt += 1
+                            if(linecnt%100 == 0):
+                                logger.debug("waiting..")
+                                logger.debug(nextline)
                     logger.info("Processing Product {0} of {1}".format(i+1, len(products)))
                     ad_result = SearchResult(product)
                     process_product(ad_result, args.pages)
