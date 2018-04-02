@@ -431,7 +431,7 @@ def create_vpn():
                                                                                           parentdir + "scripts/auth.txt")
     openvpn_cmd = shlex.split(cmd)
     init_vpn = False
-    logger.info(openvpn_cmd)
+    logger.info(" ".join(openvpn_cmd))
     proc = subprocess.Popen(openvpn_cmd, stdout=subprocess.PIPE, universal_newlines=True, preexec_fn=os.setsid)
 
     linecnt = 0
@@ -439,14 +439,14 @@ def create_vpn():
         nextline = proc.stdout.readline()
         if (nextline is None or nextline.strip() == ""):
             linecnt += 1
-        if (nextline.find("Initialization Sequence Completed") != -1):
+        elif (nextline.find("Initialization Sequence Completed") != -1):
             init_vpn = True
             logger.info(nextline)
             logger.info("VPN established")
             sleep(5)
         else:
             linecnt += 1
-            if (linecnt % 100 == 0):
+            if (linecnt % 10 == 0):
                 logger.debug("waiting..")
                 logger.debug(nextline)
 
