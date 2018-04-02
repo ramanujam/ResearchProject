@@ -387,7 +387,8 @@ def main():
             try:
                 create_vpn()
             except Exception as e:
-                report.append("Parsing/VPN Issue, please rerun for Product : {}".format(product))
+                if (attempts == 2):
+                    report.append("Parsing/VPN Issue, please rerun for Product : {}".format(product))
                 logger.info("Parsing Issue, please rerun for Product : {}".format(product))
                 logger.debug(e)
             finally:
@@ -402,7 +403,9 @@ def main():
             sleep(5)
 
     save_results_to_spreadsheet()
+    print("***************************** REPORT ************************************")
     print("\n".join(report))
+    print("*************************************************************************")
 
 def save_results_to_spreadsheet():
     searchdb = SearchDB("searchresults")
