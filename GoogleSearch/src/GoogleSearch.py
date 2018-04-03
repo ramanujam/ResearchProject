@@ -13,6 +13,7 @@ import subprocess
 import urllib
 from   bs4 import BeautifulSoup
 from   argparse import ArgumentParser
+from   functools import wraps
 from   time import sleep
 from   web2screenshot import make_screenshot
 from   DataSource import SearchDB
@@ -86,6 +87,23 @@ user_agent_list = [
         "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/535.24 (KHTML, like Gecko) Chrome/19.0.1055.1 Safari/535.24",\
         "Mozilla/5.0 (Windows NT 6.2; WOW64) AppleWebKit/535.24 (KHTML, like Gecko) Chrome/19.0.1055.1 Safari/535.24"
        ]
+
+def timeout(seconds,error_message=os.strerror(errno.ETIME)):
+    def decorator(func):
+        def _handle_timeout(signum,frame):
+            raise Exception(error_message)
+
+        def wrapper(*args, **kwargs):
+            signal.signal(signal.SIGALRM,_handle_timeout)
+            signal.setitimer(signal.ITIMER_REAL,seconds)
+            try: result = func(*args,**kwargs)
+            finally: signal.alarm(0)
+            return result
+
+        return wraps(func)(wrapper)
+
+    return decorator
+
 # Organic result class
 
 
@@ -426,6 +444,7 @@ def get_product_list():
     products  = productdb.get_all()
     return [item for item in products['ProductName']]
 
+@timeout(10, "TimedOut while creating VPN")
 def create_vpn():
     vpn_dir = parentdir + "vpn/"
     pattern = "us*443.ovpn"
