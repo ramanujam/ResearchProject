@@ -410,29 +410,22 @@ def main():
             attempts += 1
             logger.debug("Attempt {}".format(attempts))
             try:
-                create_vpn()
+                proc = create_vpn()
+                logger.info("Processing Product {0} of {1}".format(i + 1, len(products)))
+                ad_result = SearchResult(product)
+                process_product(ad_result, args.pages)
+                logger.debug(ad_result.to_string())
+                success = 1
+                sleep(5)
             except Exception as e:
-                logger.info("Parsing Issue, please rerun for Product : {0} | Attempt {1}".format(product, attempts))
+                logger.info("Parsing/VPN Issue for {0} in Attempt {1}".format(product, attempts))
                 logger.debug(e)
             finally:
                 kill_vpn(proc)
-                sleep(10)
                 if(attempts == MAX_VPN_ATTEMPTS):
                     logger.info("Parsing for {} failed, please rerun".format(product))
                     report.append("Parsing/VPN Issue, please rerun for Product : {}".format(product))
-                    return
-            logger.info("Processing Product {0} of {1}".format(i+1, len(products)))
-            ad_result = SearchResult(product)
-            try:
-                process_product(ad_result, args.pages)
-            except Exception as e:
-                logger.debug("Exception caught while processing the product {}".format(product))
-                logger.debug(e)
-                logger.info("Unable to process product {}".format(product))
-                report.append("Failed to process product after creating VPN (Please rerun): {}".format(product))
-            logger.debug(ad_result.to_string())
-            success = 1
-            sleep(5)
+                sleep(10)
 
     save_results_to_spreadsheet()
     print("***************************** REPORT ************************************")
@@ -485,7 +478,7 @@ def create_vpn():
             if (linecnt % 10 == 0):
                 logger.debug("waiting..")
                 logger.debug(nextline)
-
+    return proc
 def kill_vpn(proc):
     if proc is not None:
         os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
