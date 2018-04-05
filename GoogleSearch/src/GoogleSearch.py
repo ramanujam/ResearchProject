@@ -382,8 +382,8 @@ class SearchResult:
              "NA", ad.pagenum, ad.type, "NA", ad.price, "file://"+ad.filename]
       return row
 
-    def save_html(self, data, prefix = ""):
-        filename = "../data/" + prefix + self.keyword + ".html"
+    def save_html(self, data, prefix = "p"):
+        filename = "../data/" + prefix + "_" + self.keyword + "_" + str(self.pagenum) + ".html"
         filename = os.path.abspath(filename)
         try:
             with open(filename, "w") as text_file:
