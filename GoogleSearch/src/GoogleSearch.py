@@ -19,6 +19,11 @@ from   time import sleep
 from   web2screenshot import make_screenshot
 from   DataSource import SearchDB
 
+
+#********************* Global Vars *************************
+MAX_VPN_ATTEMPTS = 5
+#***********************************************************
+
 scriptdir = os.path.dirname(os.path.realpath(__file__))
 parentdir = scriptdir.replace("src","")
 
@@ -401,19 +406,21 @@ def main():
         proc = None
         attempts = 0
         success = 0
-        while success != 1 and attempts < 2:
+        while success != 1 and attempts < MAX_VPN_ATTEMPTS:
             attempts += 1
+            logger.debug("Attempt {}".format(attempts))
             try:
                 create_vpn()
             except Exception as e:
-                if (attempts == 2):
-                    report.append("Parsing/VPN Issue, please rerun for Product : {}".format(product))
-                logger.info("Parsing Issue, please rerun for Product : {}".format(product))
+                logger.info("Parsing Issue, please rerun for Product : {0} | Attempt {1}".format(product, attempts))
                 logger.debug(e)
             finally:
                 kill_vpn(proc)
                 sleep(10)
-            logger.debug("Attempt {}".format(attempts))
+                if(attempts == MAX_VPN_ATTEMPTS):
+                    logger.info("Parsing for {} failed, please rerun".format(product))
+                    report.append("Parsing/VPN Issue, please rerun for Product : {}".format(product))
+                    return
             logger.info("Processing Product {0} of {1}".format(i+1, len(products)))
             ad_result = SearchResult(product)
             process_product(ad_result, args.pages)
