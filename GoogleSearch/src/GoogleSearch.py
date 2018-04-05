@@ -381,6 +381,18 @@ class SearchResult:
              "NA", ad.pagenum, ad.type, "NA", ad.price, "file://"+ad.filename]
       return row
 
+    def save_html(self, data, prefix = ""):
+        filename = "../data/" + prefix + self.keyword + ".html"
+        filename = os.path.abspath(filename)
+        try:
+            with open(filename, "w") as text_file:
+                print(f"{data}", file=text_file)
+            logger.info("Saved Google Search HTML to : {}".format(filename))
+        except Exception as e:
+            logger.info("Unable to save google search HTML file")
+            logger.debug("Unable to save google search HTML file")
+            logger.debug(e)
+
 def main():
 
     # add command line options
