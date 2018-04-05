@@ -423,7 +423,13 @@ def main():
                     return
             logger.info("Processing Product {0} of {1}".format(i+1, len(products)))
             ad_result = SearchResult(product)
-            process_product(ad_result, args.pages)
+            try:
+                process_product(ad_result, args.pages)
+            except Exception as e:
+                logger.debug("Exception caught while processing the product {}".format(product))
+                logger.debug(e)
+                logger.info("Unable to process product {}".format(product))
+                report.append("Failed to process product after creating VPN (Please rerun): {}".format(product))
             logger.debug(ad_result.to_string())
             success = 1
             sleep(5)
