@@ -199,6 +199,7 @@ class SearchResult:
     def get_google_search_result(self):
         self.urlfile = urllib.request.urlopen(self.request)
         self.page    = self.urlfile.read().decode('utf-8')
+        self.save_html(self.page, prefix="GoogleSearch")
         self.soup    = BeautifulSoup(self.page, 'html.parser')
         self.get_location()
 
