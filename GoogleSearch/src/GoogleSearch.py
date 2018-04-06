@@ -15,6 +15,7 @@ import urllib
 from   bs4 import BeautifulSoup
 from   argparse import ArgumentParser
 from   functools import wraps
+from   subprocess import call
 from   time import sleep
 from   web2screenshot import make_screenshot
 from   DataSource import SearchDB
@@ -485,7 +486,7 @@ def create_vpn():
             init_vpn = True
             logger.info(nextline)
             logger.info("VPN established")
-            sleep(5)
+            sleep(2)
         else:
             linecnt += 1
             if (linecnt % 10 == 0):
@@ -499,8 +500,8 @@ def kill_vpn(proc):
         os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
         logger.debug("openvpn killed")
     else:
-        logger.debug("openvpn not killed, process not found")
-
+        logger.debug("openvpn not killed, process not found - killing all openvpn process")
+        call(['sudo','killall', 'openvpn'])
 
 if __name__ == "__main__":
     main()
