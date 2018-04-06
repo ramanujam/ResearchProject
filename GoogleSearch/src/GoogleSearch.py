@@ -494,6 +494,7 @@ def create_vpn():
     return proc
 
 def kill_vpn(proc):
+    logger.debug(proc)
     if proc is not None:
         os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
         logger.debug("openvpn killed")
