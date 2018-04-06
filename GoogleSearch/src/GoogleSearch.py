@@ -492,10 +492,13 @@ def create_vpn():
                 logger.debug("waiting..")
                 logger.debug(nextline)
     return proc
+
 def kill_vpn(proc):
     if proc is not None:
         os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
         logger.debug("openvpn killed")
+    else:
+        logger.debug("openvpn not killed, process not found")
 
 
 if __name__ == "__main__":
