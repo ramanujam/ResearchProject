@@ -243,6 +243,30 @@ class SearchResult:
         self.parse_organic_results()
 
     # todo - all the ads
+    def parse_top_panel_ads(self):
+        try:
+            self.top_panel_ads = self.soup.find(id="tvcap")
+            self.top_sponsored  = self.top_panel_ads.find_all("li", {"class" : "ads-ad"})
+            logger.info("Found {} ads on top organic panel".format(len(ad_data)))
+            for item in self.top_sponsored:
+                item_name = item.find('a', {'class' : lambda x: x.startswith('V0MxL')}).text
+                logger.info("Item name : {}".format(item_name))
+                ad = advertiz(item_name)
+                ad.location = "top sponsored"
+                ad.product_url = item.find('a', {'class' : lambda x: x.startswith('V0MxL')})['href']
+                if (ad.product_url is None):
+                    continue
+                ad.price = ""
+                ad.vendor = self.get_vendor_from_organic(ad.product_url)
+                ad.convert_url_to_pdf()
+                self.ads.append(ad)
+            self.processedSponsoredTop = True
+        except Exception as e:
+            logger.info("Unable to parse top sponsored Links")
+            if(self.top_sponsored is not None):
+                logger.debug(self.top_sponsored)
+            logger.debug(e)
+            self.processedSponsoredTop = False
 
     def parse_right_ads(self):
         try:
@@ -261,7 +285,7 @@ class SearchResult:
                 logger.info(ad.product_url)
                 logger.info(item.find('a', {"class":"plantl"})['id'])
                 ad.price          = item.find('span', {"class": "rgc6j"}).text
-                ad.vendor         = self.get_price_from_organic(ad.product_url)
+                ad.vendor         = self.get_vendor_from_organic(ad.product_url)
                 ad.convert_url_to_pdf()
                 self.ads.append(ad)
             self.processRightAd = True
