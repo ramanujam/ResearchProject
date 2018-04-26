@@ -233,6 +233,8 @@ class SearchResult:
             print("Total search results: {}".format(len(self.ads)))
 
     def parse_ads(self):
+        #get top sponsored
+        self.parse_top_sponsored()
         # get top ads
         self.parse_top_ads()
         # get right ads
@@ -243,7 +245,7 @@ class SearchResult:
         self.parse_organic_results()
 
     # todo - all the ads
-    def parse_top_panel_ads(self):
+    def parse_top_sponsored(self):
         try:
             self.top_panel_ads = self.soup.find(id="tvcap")
             self.top_sponsored  = self.top_panel_ads.find_all("li", {"class" : "ads-ad"})
