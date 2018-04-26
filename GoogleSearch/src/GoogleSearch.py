@@ -249,7 +249,7 @@ class SearchResult:
         try:
             self.top_panel_ads = self.soup.find(id="tvcap")
             self.top_sponsored  = self.top_panel_ads.find_all("li", {"class" : "ads-ad"})
-            logger.info("Found {} ads on top organic panel".format(len(ad_data)))
+            logger.info("Found {} ads on top organic panel".format(len(self.top_sponsored)))
             for item in self.top_sponsored:
                 item_name = item.find('a', {'class' : lambda x: x.startswith('V0MxL')}).text
                 logger.info("Item name : {}".format(item_name))
