@@ -251,11 +251,11 @@ class SearchResult:
             self.top_sponsored  = self.top_panel_ads.find_all("li", {"class" : "ads-ad"})
             logger.info("Found {} ads on top organic panel".format(len(self.top_sponsored)))
             for item in self.top_sponsored:
-                item_name = item.find('a', {'class' : lambda x: x.startswith('V0MxL')}).text
+                item_name = item.find('a', class_ = re.compile('^V0MxL')).text
                 logger.info("Item name : {}".format(item_name))
                 ad = advertiz(item_name)
                 ad.location = "top sponsored"
-                ad.product_url = item.find('a', {'class' : lambda x: x.startswith('V0MxL')})['href']
+                ad.product_url = item.find('a', class_ = re.compile('^V0MxL'))['href']
                 if (ad.product_url is None):
                     continue
                 ad.price = ""
