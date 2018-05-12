@@ -278,17 +278,20 @@ class SearchResult:
             logger.info("Found {} ads on the right hand side".format(len(self.right_ad_list)))
             for item in self.right_ad_list:
                 # create ad object
-                ad                = advertiz(ad_data.get_text(), self.pagenum)
-                ad.location       = "RHS"
-                ad.product_url    = item.find('a', {"class":"plantl"})
-                if (ad.product_url is None):
-                    continue
-                ad.product_url    = ad.product_url['href']
-                logger.info(ad.product_url)
-                logger.info(item.find('a', {"class":"plantl"})['id'])
-                ad.price          = item.find('span', {"class": "rgc6j"}).text
-                ad.vendor         = self.get_vendor_from_organic(ad.product_url)
-                ad.convert_url_to_pdf()
+                try:
+                    ad                = advertiz(ad_data.get_text(), self.pagenum)
+                    ad.location       = "RHS"
+                    ad.product_url    = item.find('a', {"class":"plantl"})
+                    if (ad.product_url is None):
+                        continue
+                    ad.product_url    = ad.product_url['href']
+                    logger.info(ad.product_url)
+                    logger.info(item.find('a', {"class":"plantl"})['id'])
+                    ad.price          = item.find('span', {"class": "rgc6j"}).text
+                    ad.vendor         = self.get_vendor_from_organic(ad.product_url)
+                    ad.convert_url_to_pdf()
+                except Exception as e:
+                    logger.debug("Unable to parse some ads on the right.")
                 self.ads.append(ad)
             self.processRightAd = True
         except Exception as e:
@@ -352,20 +355,24 @@ class SearchResult:
             self.organic_list       = self.organic.find_all('div', {"class":"g"})
             count = 1;
             for item in self.organic_list:
-                item_data           = item.find('h3', {"class":"r"}).find('a')
-                item_name           = item_data.text
-                oresult             = organic(item_name, self.pagenum)
-                oresult.product_url = item_data['href']
-                logger.debug("Got url " + item_data['href'])
-                oresult.vendor      = self.get_vendor_from_organic(item_data['href'])
-                logger.debug("Got vendor " + oresult.vendor)
-                oresult.location    = "organic :"  + str(count)
-                logger.debug("Found Organic result item : %d", count)
-                count               = count + 1
-                oresult.price       = self.get_price_from_organic(item)
-                oresult.convert_url_to_pdf()
-                logger.debug(oresult.to_string())
-                self.ads.append(oresult)
+                try:
+                    item_data           = item.find('h3', {"class":"r"}).find('a')
+                    item_name           = item_data.text
+                    oresult             = organic(item_name, self.pagenum)
+                    oresult.product_url = item_data['href']
+                    logger.debug("Got url " + item_data['href'])
+                    oresult.vendor = self.get_vendor_from_organic(item_data['href'])
+                    logger.debug("Got vendor " + oresult.vendor)
+                    oresult.location = "organic :" + str(count)
+                    logger.debug("Found Organic result item : %d", count)
+                    count = count + 1
+                    oresult.price = self.get_price_from_organic(item)
+                    oresult.convert_url_to_pdf()
+                    logger.debug(oresult.to_string())
+                    self.ads.append(oresult)
+                except Exception as e:
+                    logger.info("Can't process organic item at {}, probably a list of images here.".format(count))
+
             self.processOrganic = True
         except Exception as e:
             logger.info("Error while parsing organic result\n")
