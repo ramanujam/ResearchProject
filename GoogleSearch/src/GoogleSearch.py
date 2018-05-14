@@ -235,11 +235,13 @@ class SearchResult:
     def parse_ads(self):
         #get top sponsored
         self.parse_top_sponsored()
-        # get top ads
+        # # get top ads
         self.parse_top_ads()
-        # get right ads
+        # # get right ads
         self.parse_right_ads()
-        #get bottom ads
+        # #parse right tables
+        self.parse_right_ads_table()
+        # #get bottom ads
         self.parse_bottom_ads()
         #get_organic_results
         self.parse_organic_results()
@@ -270,6 +272,42 @@ class SearchResult:
             logger.debug(e)
             self.processedSponsoredTop = False
 
+    def parse_right_ads_table(self):
+        root_class_name = "twpSFc mnr-c"
+        price_ex = re.compile(r"(\$\d+[\.\d]+)\b")
+        logger.info("Parsing right side tables")
+        try:
+            self.right_ads_table_data = self.soup.find_all('div', {"class": root_class_name})
+            logger.info("Found {} ads on the right hand table".format(len(self.right_ads_table_data)))
+            for table_ad in self.right_ads_table_data:
+                data_table = table_ad.find("table", {"class" : "ts"})
+                if data_table is not None:
+                    logger.debug("Table not found.. check the table class name")
+                    cells = data_table.find_all("td")
+                    print(cells)
+                    try:
+                        ad_data = cells[1].find('span', {"class":"pymv4e"}).text
+                        print(ad_data)
+                        ad = advertiz(ad_data, self.pagenum)
+                        ad.location = "RHS Table"
+                        ad_urls = cells[1].find_all("a", href=True)
+                        for url in ad_urls:
+                            if "//:" in url:
+                                ad.product_url = url
+                        if ad.product_url is None:
+                            continue
+                        logger.info(ad.product_url)
+                        if(price_ex.search(cells[1])):
+                            ad.price = price_ex.search(cells[1]).group(1)
+                        ad.vendor = cells[1].find("div", {"class" : "Ndt4Qb", "text" : True})
+                        print(ad.to_string())
+                        ad.convert_url_to_pdf()
+                        self.ads.append(ad)
+                    except Exception as e:
+                        logger.debug(e)
+        except:
+            logger.debug("Right table Ads: If there are tables in the original html - maybe the class-id in the corresponding block is not correct.")
+
     def parse_right_ads(self):
         try:
             self.right_ads = self.soup.find(id="rhs")
@@ -290,14 +328,12 @@ class SearchResult:
                     ad.price          = item.find('span', {"class": "rgc6j"}).text
                     ad.vendor         = self.get_vendor_from_organic(ad.product_url)
                     ad.convert_url_to_pdf()
+                    self.ads.append(ad)
                 except Exception as e:
                     logger.debug("Unable to parse some ads on the right.")
-                self.ads.append(ad)
             self.processRightAd = True
         except Exception as e:
             logger.info("Unable to parse right_ads\n")
-            if(self.right_ads is not None):
-                logger.info(self.right_ads.prettify())
             logger.debug(e)
             self.processRightAd = False
 
@@ -351,9 +387,9 @@ class SearchResult:
 
     def parse_organic_results(self):
         try:
-            self.organic            = self.soup.find('div', {"class":"srg"})
-            self.organic_list       = self.organic.find_all('div', {"class":"g"})
-            count = 1;
+            self.organic_list = self.soup.find_all('div', {"class": "g"})
+            logger.info("Found {} organic ads".format(len(self.organic_list)))
+            count = 1
             for item in self.organic_list:
                 try:
                     item_data           = item.find('h3', {"class":"r"}).find('a')
@@ -372,8 +408,8 @@ class SearchResult:
                     self.ads.append(oresult)
                 except Exception as e:
                     logger.info("Can't process organic item at {}, probably a list of images here.".format(count))
-
-            self.processOrganic = True
+                    continue
+                self.processOrganic = True
         except Exception as e:
             logger.info("Error while parsing organic result\n")
 
@@ -410,6 +446,7 @@ class SearchResult:
             return "NA"
         else:
             return price.group(1)
+
     def get_spreadsheet_row(self, ad):
       row = [self.city, self.state, datetime.datetime.now(), self.keyword, \
              self.address, ad.product_url, ad.vendor, "NA", "NA", ad.location, \
@@ -435,7 +472,7 @@ def main():
     parser.add_argument("-p", "--product_name", action="store", type=str, help="Enter the product you want to search")
     parser.add_argument("-m", "--screenshot", action="store_true", default = True, help="Do you want to take screenshot")
     parser.add_argument("-n", "--pages", action="store", default = 2, dest = "pages", help="Number of pages to parse")
-
+    # parser.add_argument("-h", "--html", action="store", default=2, dest="html", help="Number of pages to parse")
     args = parser.parse_args()
 
     report = []
